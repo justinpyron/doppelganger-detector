@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "doppelganger-detector"
+version = "0.1.0"
+description = ""
+authors = ["Justin Pyron <justinpyron@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+numpy = "^2.2.1"
+pandas = "^2.2.3"
+torch = "^2.5.1"
+matplotlib = "^3.10.0"
+jupyterlab = "^4.3.4"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
