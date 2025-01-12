@@ -1,4 +1,4 @@
 # doppelganger-detector
-App to identify your doppelganger
+App that identifies your celebrity doppelganger
 
-![alt text](image.png)
+![alt text](readme_image.png)

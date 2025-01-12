@@ -12,6 +12,8 @@ pandas = "^2.2.3"
 torch = "^2.5.1"
 matplotlib = "^3.10.0"
 jupyterlab = "^4.3.4"
+torchvision = "^0.20.1"
+opencv-python = "^4.10.0.84"
 
 
 [build-system]
