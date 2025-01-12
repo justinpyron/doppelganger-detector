@@ -45,10 +45,13 @@ class GoogleImageScraper:
 
     def fetch_image_from_url(self, url: str) -> torch.tensor:
         """Returns tensor of image at url"""
-        response = requests.get(url)
-        with BytesIO(response.content) as f:
-            with Image.open(f) as image:
-                return np.array(image)
+        try:
+            response = requests.get(url)
+            with BytesIO(response.content) as f:
+                with Image.open(f) as image:
+                    return np.array(image)
+        except:
+            pass
 
     def fetch_images(
         self,
@@ -81,13 +84,16 @@ class GoogleImageScraper:
         """
         N = len(queries)
         for i, query in enumerate(queries):
-            images = self.fetch_images(query, images_per_query, min_face_fraction)
-            for j, image in enumerate(images):
-                image_channel_last_dim = torch.permute(torch.tensor(image), (2,0,1))
-                query_cleaned = query.lower().replace(" ", "_")
-                filename = os.path.join(
-                    self.destination_folder,
-                    f"{query_cleaned}__{j:02}.pt",
-                )
-                torch.save(image_channel_last_dim, filename)
-            print(f"{query:30} [{i+1:4}/{N}] Number of images = {len(images):2}")
+            try:
+                images = self.fetch_images(query, images_per_query, min_face_fraction)
+                for j, image in enumerate(images):
+                    image_channel_last_dim = torch.permute(torch.tensor(image), (2,0,1))
+                    query_cleaned = query.lower().replace(" ", "_")
+                    filename = os.path.join(
+                        self.destination_folder,
+                        f"{query_cleaned}__{j:02}.pt",
+                    )
+                    torch.save(image_channel_last_dim, filename)
+                print(f"{query:30} [{i+1:4}/{N}] Number of images = {len(images):2}")
+            except:
+                pass
