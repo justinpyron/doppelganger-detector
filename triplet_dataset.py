@@ -1,19 +1,16 @@
-import os
-
 import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
-ROOT = "images"
 
-
-def create_triplets(seed: int = 2025) -> list[tuple[str, str, str]]:
-    files = os.listdir(ROOT)
+def create_triplets(
+    files: list[str],
+    seed: int = 2025,
+) -> list[tuple[str, str, str]]:
     actors = sorted(list(set([f.split("__")[0] for f in files])))
     albums = [
-        sorted([os.path.join(ROOT, f) for f in files if f.split("__")[0] == actor])
-        for actor in actors
+        sorted([f for f in files if f.split("__")[0] == actor]) for actor in actors
     ]
     np.random.seed(seed)
     triplets = list()
@@ -27,8 +24,8 @@ def create_triplets(seed: int = 2025) -> list[tuple[str, str, str]]:
                     np.random.choice(albums[np.random.choice(negatives_ids)])
                 )
                 triplets.append((anchor, positive, negative))
-    print(f"Number of actors in dataset = {len(actors)}")
     print(f"Number of photos in dataset = {len(files)}")
+    print(f"Number of actors in dataset = {len(actors)}")
     print(f"Number of triplets in dataset = {len(triplets)}")
     return triplets
 
