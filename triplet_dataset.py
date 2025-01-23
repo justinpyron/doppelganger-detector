@@ -30,7 +30,7 @@ def create_triplets(
     return triplets
 
 
-class ActorTripletDataset(Dataset):
+class TripletDataset(Dataset):
     def __init__(
         self,
         triplets: list[tuple[str, str, str]],
@@ -55,3 +55,23 @@ class ActorTripletDataset(Dataset):
                 self.transform(positive),
                 self.transform(negative),
             )
+
+
+class ActorDataset(Dataset):
+    def __init__(
+        self,
+        filenames: list[str],
+        transform,
+    ):
+        self.filenames = filenames
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.filenames)
+
+    def __getitem__(self, idx):
+        image = torch.load(self.filenames[idx], weights_only=True)
+        if self.transform is None:
+            return image
+        else:
+            return self.transform(image)
