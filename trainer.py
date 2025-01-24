@@ -11,15 +11,7 @@ from torch.utils.data import DataLoader
 
 from metrics import get_metrics
 
-
-def make_logger(filename: str) -> logging.Logger:
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
-    handler = logging.FileHandler(filename)
-    formatter = logging.Formatter("%(asctime)s - %(message)s")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    return logger
+logger = logging.getLogger(__name__)
 
 
 class DoppelgangerTrainer:
@@ -41,9 +33,7 @@ class DoppelgangerTrainer:
         self.loss_train = list()
         self.loss_val = list()
         self.n_epochs = 0
-        self.birthday = (
-            datetime.now().replace(microsecond=0).isoformat().replace(":", "_")
-        )
+        self.birthday = datetime.now().strftime("%Y-%m-%dT%H_%M")
 
     def launch_epoch(
         self,
@@ -54,7 +44,10 @@ class DoppelgangerTrainer:
         k: int = 10,
         print_every: int = 10,
     ) -> None:
-        logger = make_logger(f"log_{self.birthday}_epoch{self.n_epochs}.pt")
+        checkpoint_name = f"checkpoint_{self.birthday}_epoch{self.n_epochs}.pt"
+        logger.info("-" * 80)
+        logger.info(f"Epoch {self.n_epochs}")
+        logger.info(f"Checkpoint name = {checkpoint_name}")
         logger.info("ARGUMENTS")
         logger.info(f"margin = {margin}")
         logger.info(f"k = {k}")
@@ -129,4 +122,4 @@ class DoppelgangerTrainer:
 
         # SAVE
         checkpoint = {k: v.cpu() for k, v in model.state_dict().items()}
-        torch.save(checkpoint, f"checkpoint_{self.birthday}_epoch{self.n_epochs}.pt")
+        torch.save(checkpoint, checkpoint_name)
