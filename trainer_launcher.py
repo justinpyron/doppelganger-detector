@@ -1,4 +1,6 @@
+import logging
 import os
+from datetime import datetime
 
 import numpy as np
 from torch.optim import AdamW, lr_scheduler
@@ -8,7 +10,8 @@ from torchvision.models import ResNet18_Weights, resnet18
 from doppelganger_datasets import ActorDataset, TripletDataset, create_triplets
 from trainer import DoppelgangerTrainer
 
-subset_size = 100
+# subset_size = 100
+subset_size = 20
 train_fraction = 0.9
 batch_size_triplets = 32
 batch_size_actors = 64
@@ -17,7 +20,21 @@ margin = 20
 k = 9
 
 
+log_filename = datetime.now().strftime("log_%Y%m%dT%H%M.log")
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s - %(name)s - %(message)s",
+    handlers=[logging.FileHandler(log_filename)],
+)
+logger = logging.getLogger(__name__)
+
+
 def main():
+    logger.info("Launching train session...")
+    logger.info(f"batch_size_triplets = {batch_size_triplets}")
+    logger.info(f"batch_size_actors = {batch_size_actors}")
+    logger.info(f"weight_decay = {weight_decay}")
+
     # Data files
     root = "images/"
     files = sorted([os.path.join(root, f) for f in os.listdir(root)])
@@ -63,6 +80,9 @@ def main():
         actor_dataset_val, batch_size=batch_size_actors, num_workers=4, shuffle=False
     )
 
+    # Load pre-trained model
+    model = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
+
     # Create trainer
     trainer = DoppelgangerTrainer(
         files_train=files_train,
@@ -72,9 +92,6 @@ def main():
         actor_dataloader_train=actor_loader_train,
         actor_dataloader_val=actor_loader_val,
     )
-
-    # Load pre-trained model
-    model = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
 
     # Epoch 0: Freeze all weights except last fully-connected layer
     for name, param in model.named_parameters():

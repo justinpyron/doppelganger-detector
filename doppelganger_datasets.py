@@ -1,7 +1,10 @@
+import logging
+
 import numpy as np
-import pandas as pd
 import torch
 from torch.utils.data import Dataset
+
+logger = logging.getLogger(__name__)
 
 
 def create_triplets(
@@ -24,9 +27,9 @@ def create_triplets(
                     np.random.choice(albums[np.random.choice(negatives_ids)])
                 )
                 triplets.append((anchor, positive, negative))
-    print(f"Number of photos in dataset = {len(files)}")
-    print(f"Number of actors in dataset = {len(actors)}")
-    print(f"Number of triplets in dataset = {len(triplets)}")
+    logger.info(f"Number of photos in dataset = {len(files)}")
+    logger.info(f"Number of actors in dataset = {len(actors)}")
+    logger.info(f"Number of triplets in dataset = {len(triplets)}")
     return triplets
 
 
