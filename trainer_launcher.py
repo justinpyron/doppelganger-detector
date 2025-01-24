@@ -10,8 +10,7 @@ from torchvision.models import ResNet18_Weights, resnet18
 from doppelganger_datasets import ActorDataset, TripletDataset, create_triplets
 from trainer import DoppelgangerTrainer
 
-# subset_size = 100
-subset_size = 20
+subset_size = 1000
 train_fraction = 0.9
 batch_size_triplets = 32
 batch_size_actors = 64
@@ -41,6 +40,7 @@ def main():
     actors = sorted(list(set([f.split("__")[0] for f in files])))
 
     # Create a subset
+    np.random.seed(2025)
     actors_subset = np.random.permutation(actors)[:subset_size]
     idx = np.random.permutation(np.arange(subset_size))
     idx_train = idx[: int(subset_size * train_fraction)]
@@ -98,7 +98,7 @@ def main():
         if not "fc" in name:
             param.requires_grad = False
     optimizer = AdamW(model.parameters(), lr=1e-4, weight_decay=weight_decay)
-    scheduler = lr_scheduler.LinearLR(optimizer, start_factor=0.1, total_iters=150)
+    scheduler = lr_scheduler.LinearLR(optimizer, start_factor=0.1, total_iters=500)
     trainer.launch_epoch(
         model=model,
         optimizer=optimizer,
@@ -108,11 +108,11 @@ def main():
         print_every=10,
     )
 
-    # Epoch 1: Train all weights
+    # Epoch 1+: Train all weights
     for param in model.parameters():
         param.requires_grad = True
     optimizer = AdamW(model.parameters(), lr=1e-5, weight_decay=weight_decay)
-    scheduler = lr_scheduler.LinearLR(optimizer, start_factor=0.1, total_iters=150)
+    scheduler = lr_scheduler.LinearLR(optimizer, start_factor=0.1, total_iters=500)
     trainer.launch_epoch(
         model=model,
         optimizer=optimizer,
@@ -121,7 +121,14 @@ def main():
         k=k,
         print_every=10,
     )
-
+    trainer.launch_epoch(
+        model=model,
+        optimizer=optimizer,
+        scheduler=scheduler,
+        margin=margin,
+        k=k,
+        print_every=10,
+    )
 
 if __name__ == "__main__":
     main()
