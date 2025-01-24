@@ -53,11 +53,18 @@ class DoppelgangerTrainer:
         logger.info(f"k = {k}")
         start = time.time()
 
+        # DEVICE
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model = model.to(device)
+
         # TRAIN SET
         logger.info("TRAIN")
         l_train = list()
         model.train()
         for i, (anchor, positive, negative) in enumerate(self.triplet_dataloader_train):
+            anchor = anchor.to(device)
+            positive = positive.to(device)
+            negative = negative.to(device)
             out_anchor = model(anchor)
             out_positive = model(positive)
             out_negative = model(negative)
