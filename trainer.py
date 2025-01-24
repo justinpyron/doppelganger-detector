@@ -92,6 +92,9 @@ class DoppelgangerTrainer:
             for i, (anchor, positive, negative) in enumerate(
                 self.triplet_dataloader_val
             ):
+                anchor = anchor.to(device)
+                positive = positive.to(device)
+                negative = negative.to(device)
                 out_anchor = model(anchor)
                 out_positive = model(positive)
                 out_negative = model(negative)
