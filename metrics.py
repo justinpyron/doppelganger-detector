@@ -74,14 +74,17 @@ def get_embedding_vectors(
     model: nn.Module,
 ) -> torch.Tensor:
     """Do a forward pass to compute embedding vectors"""
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = model.to(device)
     logits = list()
     with torch.no_grad():
         for i, image in enumerate(image_dataloader):
+            image = image.to(device)
             out = model(image)
             if i % 10 == 0:
                 logger.info(f"[computing embeddings] {i:4} / {len(image_dataloader)}")
-            logits.append(out)
-    return torch.vstack(logits)
+            logits.append(out.cpu())
+    return torch.vstack(logits).numpy()
 
 
 def get_metrics(
