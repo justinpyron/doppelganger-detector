@@ -65,9 +65,9 @@ class DoppelgangerTrainer:
             anchor = anchor.to(device)
             positive = positive.to(device)
             negative = negative.to(device)
-            out_anchor = model(anchor)
-            out_positive = model(positive)
-            out_negative = model(negative)
+            out_anchor = model(anchor).logits
+            out_positive = model(positive).logits
+            out_negative = model(negative).logits
             loss = F.triplet_margin_loss(
                 out_anchor, out_positive, out_negative, margin=margin
             )
@@ -95,9 +95,9 @@ class DoppelgangerTrainer:
                 anchor = anchor.to(device)
                 positive = positive.to(device)
                 negative = negative.to(device)
-                out_anchor = model(anchor)
-                out_positive = model(positive)
-                out_negative = model(negative)
+                out_anchor = model(anchor).logits
+                out_positive = model(positive).logits
+                out_negative = model(negative).logits
                 loss = F.triplet_margin_loss(
                     out_anchor, out_positive, out_negative, margin=margin
                 )
