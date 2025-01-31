@@ -4,28 +4,27 @@ from datetime import datetime
 
 import numpy as np
 import torch
+from torch import nn
 from torch.optim import AdamW, lr_scheduler
 from torch.utils.data import DataLoader
-from torchvision.models import ResNet18_Weights, resnet18, ResNet50_Weights, resnet50
+from transformers import AutoImageProcessor, AutoModelForImageClassification
 
-from doppelganger_datasets import ActorDataset, TripletDataset, create_triplets
+from doppelganger_datasets import ImageDataset, TripletDataset, create_triplets
 from trainer import DoppelgangerTrainer
 
 subset_size = 1000
 train_fraction = 0.9
-batch_size_triplets = 32
-batch_size_actors = 64
-lr_head_only = 1e-4
-lr = 1e-4
-start_factor_head_only = 0.01
+batch_size_triplets = 16
+batch_size_actors = 32
+lr = 1e-3
 start_factor = 0.01
+warmup = 1000
 weight_decay = 0.5
-margin = 40
+margin = 1
 k = 9
-model_type = resnet18
-model_weights = ResNet18_Weights.IMAGENET1K_V1
-# model_type = resnet50
-# model_weights = ResNet50_Weights.IMAGENET1K_V2
+embedding_dim = 256
+model_card = "trpakov/vit-face-expression"
+processor = AutoImageProcessor.from_pretrained(model_card, use_fast=False)
 
 
 log_filename = datetime.now().strftime("log_%Y%m%dT%H%M.log")
@@ -42,10 +41,9 @@ def main():
     logger.info(f"batch_size_triplets = {batch_size_triplets}")
     logger.info(f"batch_size_actors = {batch_size_actors}")
     logger.info(f"weight_decay = {weight_decay}")
-    logger.info(f"lr_head_only = {lr_head_only}")
     logger.info(f"lr = {lr}")
-    logger.info(f"start_factor_head_only = {start_factor_head_only}")
     logger.info(f"start_factor = {start_factor}")
+    logger.info(f"warmup = {warmup}")
 
     # Data files
     root = "images/"
@@ -68,11 +66,10 @@ def main():
     )
 
     # Triplets datasets
-    resnet_transform = model_weights.transforms()
-    triplets_train = create_triplets(files_train)
-    triplets_val = create_triplets(files_val)
-    triplet_dataset_train = TripletDataset(triplets_train, transform=resnet_transform)
-    triplet_dataset_val = TripletDataset(triplets_val, transform=resnet_transform)
+    triplets_train = create_triplets(files_train, processor, n_components=10)
+    triplets_val = create_triplets(files_val, processor, n_components=10)
+    triplet_dataset_train = TripletDataset(triplets_train, processor)
+    triplet_dataset_val = TripletDataset(triplets_val, processor)
     triplet_dataloader_train = DataLoader(
         triplet_dataset_train,
         batch_size=batch_size_triplets,
@@ -80,24 +77,32 @@ def main():
         shuffle=True,
     )
     triplet_dataloader_val = DataLoader(
-        triplet_dataset_val, batch_size=batch_size_triplets, num_workers=4, shuffle=True
+        triplet_dataset_val,
+        batch_size=batch_size_triplets,
+        num_workers=4,
+        shuffle=True,
     )
 
     # Actor datasets
-    actor_dataset_train = ActorDataset(files_train, resnet_transform)
-    actor_dataset_val = ActorDataset(files_val, resnet_transform)
+    actor_dataset_train = ImageDataset(files_train, processor)
+    actor_dataset_val = ImageDataset(files_val, processor)
     actor_loader_train = DataLoader(
-        actor_dataset_train, batch_size=batch_size_actors, num_workers=4, shuffle=False
+        actor_dataset_train,
+        batch_size=batch_size_actors,
+        num_workers=4,
+        shuffle=False,
     )
     actor_loader_val = DataLoader(
-        actor_dataset_val, batch_size=batch_size_actors, num_workers=4, shuffle=False
+        actor_dataset_val,
+        batch_size=batch_size_actors,
+        num_workers=4,
+        shuffle=False,
     )
 
     # Load pre-trained model
-    model = model_type(weights=model_weights)
-    # Load model you've trained already
-    # model = model_type()
-    # model.load_state_dict(torch.load("checkpoint_2025-01-24T16_23_epoch3.pt", weights_only=True))
+    model = AutoModelForImageClassification.from_pretrained(model_card)
+    head = nn.Linear(model.classifier.in_features, embedding_dim)
+    model.classifier = head
 
     # Create trainer
     trainer = DoppelgangerTrainer(
@@ -111,11 +116,14 @@ def main():
 
     # Epoch 0: Freeze all weights except last fully-connected layer
     for name, param in model.named_parameters():
-        if not "fc" in name:
+        if not "classifier" in name:
             param.requires_grad = False
-    # optimizer = AdamW(model.parameters(), lr=5e-5, weight_decay=weight_decay)
-    optimizer = AdamW(model.parameters(), lr=lr_head_only, weight_decay=weight_decay)
-    scheduler = lr_scheduler.LinearLR(optimizer, start_factor=start_factor_head_only, total_iters=500)
+        else:
+            param.requires_grad = True
+    optimizer = AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    scheduler = lr_scheduler.LinearLR(
+        optimizer, start_factor=start_factor, total_iters=warmup
+    )
     trainer.launch_epoch(
         model=model,
         optimizer=optimizer,
@@ -125,21 +133,6 @@ def main():
         print_every=10,
     )
 
-    # Epoch 1+: Train all weights
-    for param in model.parameters():
-        param.requires_grad = True
-    # optimizer = AdamW(model.parameters(), lr=5e-6, weight_decay=weight_decay)
-    optimizer = AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
-    scheduler = lr_scheduler.LinearLR(optimizer, start_factor=start_factor, total_iters=500)
-    for i in range(10):
-        trainer.launch_epoch(
-            model=model,
-            optimizer=optimizer,
-            scheduler=scheduler,
-            margin=margin,
-            k=k,
-            print_every=10,
-        )
 
 if __name__ == "__main__":
     main()

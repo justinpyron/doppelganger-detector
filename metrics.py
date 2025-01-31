@@ -80,7 +80,7 @@ def get_embedding_vectors(
     with torch.no_grad():
         for i, image in enumerate(image_dataloader):
             image = image.to(device)
-            out = model(image)
+            out = model(image).logits
             if i % 10 == 0:
                 logger.info(f"[computing embeddings] {i:4} / {len(image_dataloader)}")
             logits.append(out.cpu())
