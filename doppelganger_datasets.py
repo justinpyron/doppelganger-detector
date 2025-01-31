@@ -13,10 +13,10 @@ class TripletDataset(Dataset):
     def __init__(
         self,
         triplets: list[tuple[str, str, str]],
-        transform,
+        processor,
     ) -> None:
         self.triplets = triplets
-        self.transform = transform
+        self.processor = processor
 
     def __len__(self):
         return len(self.triplets)
@@ -26,13 +26,13 @@ class TripletDataset(Dataset):
         anchor = torch.load(path_anchor, weights_only=True)
         positive = torch.load(path_positive, weights_only=True)
         negative = torch.load(path_negative, weights_only=True)
-        if self.transform is None:
+        if self.processor is None:
             return anchor, positive, negative
         else:
             return (
-                self.transform(anchor),
-                self.transform(positive),
-                self.transform(negative),
+                self.processor(anchor, return_tensors="pt")["pixel_values"][0],
+                self.processor(positive, return_tensors="pt")["pixel_values"][0],
+                self.processor(negative, return_tensors="pt")["pixel_values"][0],
             )
 
 
@@ -40,20 +40,20 @@ class ImageDataset(Dataset):
     def __init__(
         self,
         filenames: list[str],
-        transform,
+        processor,
     ):
         self.filenames = filenames
-        self.transform = transform
+        self.processor = processor
 
     def __len__(self):
         return len(self.filenames)
 
     def __getitem__(self, idx):
         image = torch.load(self.filenames[idx], weights_only=True)
-        if self.transform is None:
+        if self.processor is None:
             return image
         else:
-            return self.transform(image)
+            return self.processor(image, return_tensors="pt")["pixel_values"][0]
 
 
 def reduce_dim(
@@ -69,18 +69,19 @@ def reduce_dim(
 
 def create_triplets(
     files: list[str],
-    transform,
+    processor,
+    n_components: int = 500,
     seed: int = 2025,
 ) -> list[tuple[str, str, str]]:
     names = sorted(list(set([f.split("__")[0] for f in files])))
     albums = [
         [i for i, f in enumerate(files) if f.split("__")[0] == name] for name in names
     ]
-    image_dataset = ImageDataset(files, transform)
+    image_dataset = ImageDataset(files, processor)
     images = torch.stack(
         [image_dataset[i].flatten() for i in range(len(image_dataset))]
     ).numpy()
-    images_reduced_dim = reduce_dim(images, 500)
+    images_reduced_dim = reduce_dim(images, n_components)
     distances = cdist(images_reduced_dim, images_reduced_dim)
     triplets = list()
     for album in albums:
