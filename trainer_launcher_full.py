@@ -13,16 +13,17 @@ from transformers import AutoImageProcessor, AutoModelForImageClassification
 from doppelganger_datasets import ImageDataset, TripletDataset, create_triplets
 from trainer import DoppelgangerTrainer
 
-checkpoint = "checkpoint_2025-02-01T14_03_epoch0.pt"
-batch_size_triplets = 16
-batch_size_actors = 32
-lr = 5e-4
+checkpoint = "checkpoint_2025-02-01T16_28_epoch2.pt"
+batch_size_triplets = 32
+batch_size_actors = 256
+lr = 1e-4
 start_factor = 0.01
-warmup = 1000
+warmup = 500
 weight_decay = 0.5
 margin = 0.5
-k = 9
+k = 100
 embedding_dim = 128
+n_epochs = 2
 model_card = "trpakov/vit-face-expression"
 processor = AutoImageProcessor.from_pretrained(model_card, use_fast=False)
 
@@ -45,6 +46,7 @@ def main():
     logger.info(f"start_factor = {start_factor}")
     logger.info(f"warmup = {warmup}")
     logger.info(f"embedding_dim = {embedding_dim}")
+    logger.info(f"n_epochs = {n_epochs}")
 
     # Load data
     files_train = pd.read_csv("files_train.csv").filenames.tolist()
@@ -109,14 +111,15 @@ def main():
     scheduler = lr_scheduler.LinearLR(
         optimizer, start_factor=start_factor, total_iters=warmup
     )
-    trainer.launch_epoch(
-        model=model,
-        optimizer=optimizer,
-        scheduler=scheduler,
-        margin=margin,
-        k=k,
-        print_every=10,
-    )
+    for i in range(n_epochs):
+        trainer.launch_epoch(
+            model=model,
+            optimizer=optimizer,
+            scheduler=scheduler,
+            margin=margin,
+            k=k,
+            print_every=10,
+        )
 
 
 if __name__ == "__main__":
