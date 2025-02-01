@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 
 import numpy as np
+import pandas as pd
 import torch
 from torch import nn
 from torch.optim import AdamW, lr_scheduler
@@ -12,17 +13,15 @@ from transformers import AutoImageProcessor, AutoModelForImageClassification
 from doppelganger_datasets import ImageDataset, TripletDataset, create_triplets
 from trainer import DoppelgangerTrainer
 
-subset_size = 1000
-train_fraction = 0.9
 batch_size_triplets = 16
 batch_size_actors = 32
 lr = 1e-3
 start_factor = 0.01
 warmup = 1000
 weight_decay = 0.5
-margin = 1
+margin = 0.5
 k = 9
-embedding_dim = 256
+embedding_dim = 128
 model_card = "trpakov/vit-face-expression"
 processor = AutoImageProcessor.from_pretrained(model_card, use_fast=False)
 
@@ -45,29 +44,15 @@ def main():
     logger.info(f"start_factor = {start_factor}")
     logger.info(f"warmup = {warmup}")
 
-    # Data files
-    root = "images/"
-    files = sorted([os.path.join(root, f) for f in os.listdir(root)])
-    actors = sorted(list(set([f.split("__")[0] for f in files])))
-
-    # Create a subset
-    np.random.seed(2025)
-    actors_subset = np.random.permutation(actors)[:subset_size]
-    idx = np.random.permutation(np.arange(subset_size))
-    idx_train = idx[: int(subset_size * train_fraction)]
-    idx_val = idx[int(subset_size * train_fraction) :]
-    actors_train = [actors_subset[i] for i in idx_train]
-    actors_val = [actors_subset[i] for i in idx_val]
-    files_train = sorted(
-        [f for actor in actors_train for f in files if f.split("__")[0] == actor]
-    )
-    files_val = sorted(
-        [f for actor in actors_val for f in files if f.split("__")[0] == actor]
-    )
+    # Load data
+    files_train = pd.read_csv("files_train.csv").filenames.tolist()
+    files_val = pd.read_csv("files_val.csv").filenames.tolist()
+    df_train = pd.read_csv("triplets_train.csv")
+    df_val = pd.read_csv("triplets_val.csv")
+    triplets_train = list(df_train.itertuples(index=False, name=None))
+    triplets_val = list(df_val.itertuples(index=False, name=None))
 
     # Triplets datasets
-    triplets_train = create_triplets(files_train, processor, n_components=10)
-    triplets_val = create_triplets(files_val, processor, n_components=10)
     triplet_dataset_train = TripletDataset(triplets_train, processor)
     triplet_dataset_val = TripletDataset(triplets_val, processor)
     triplet_dataloader_train = DataLoader(
@@ -99,7 +84,7 @@ def main():
         shuffle=False,
     )
 
-    # Load pre-trained model
+    # Load model
     model = AutoModelForImageClassification.from_pretrained(model_card)
     head = nn.Linear(model.classifier.in_features, embedding_dim)
     model.classifier = head
