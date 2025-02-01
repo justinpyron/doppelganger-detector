@@ -16,10 +16,11 @@ from trainer import DoppelgangerTrainer
 checkpoint = "checkpoint_2025-02-01T16_28_epoch2.pt"
 batch_size_triplets = 32
 batch_size_actors = 256
-lr = 1e-4
+lr = 1e-5
 start_factor = 0.01
 warmup = 500
-weight_decay = 0.5
+weight_decay = 1
+dropout_prob = 0.1
 margin = 0.5
 k = 100
 embedding_dim = 128
@@ -42,6 +43,7 @@ def main():
     logger.info(f"batch_size_triplets = {batch_size_triplets}")
     logger.info(f"batch_size_actors = {batch_size_actors}")
     logger.info(f"weight_decay = {weight_decay}")
+    logger.info(f"dropout_prob = {dropout_prob}")
     logger.info(f"lr = {lr}")
     logger.info(f"start_factor = {start_factor}")
     logger.info(f"warmup = {warmup}")
@@ -93,6 +95,8 @@ def main():
     head = nn.Linear(model.classifier.in_features, embedding_dim)
     model.classifier = head
     model.load_state_dict(torch.load(checkpoint, weights_only=True))
+    model.config.attention_probs_dropout_prob = dropout_prob
+    model.config.hidden_dropout_prob = dropout_prob
 
     # Create trainer
     trainer = DoppelgangerTrainer(
