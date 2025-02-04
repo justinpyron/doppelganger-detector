@@ -4,6 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["Justin Pyron <justinpyron@gmail.com>"]
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -19,7 +20,6 @@ scikit-learn = "^1.6.1"
 transformers = "^4.48.1"
 streamlit = "^1.41.1"
 selenium = "^4.28.1"
-
 
 [build-system]
 requires = ["poetry-core"]
