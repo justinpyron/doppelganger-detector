@@ -15,7 +15,7 @@ FILENAME_EMBEDDINGS = "embeddings.pt"
 
 class Retriever:
     def __init__(self):
-        self.files = sorted(os.path.join(ROOT, f) for f in os.listdir(ROOT))
+        self.files = pd.read_csv("filenames.csv")["filenames"].tolist()
         self.names = np.array([f.split("/")[1].split("__")[0] for f in self.files])
         self.embeddings = torch.load(FILENAME_EMBEDDINGS, weights_only=True)
         self.load_model()
